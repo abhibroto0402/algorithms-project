@@ -96,7 +96,7 @@ public class MapLoad {
 						pointID++;
 						coordMap.put(temp, pointID);
 						if (pointID < 10){
-							System.out.println("Point: "+temp.toString() );
+							//System.out.println("Point: "+temp.toString() );
 						}
 					}
 					if (lastCoord == null){
