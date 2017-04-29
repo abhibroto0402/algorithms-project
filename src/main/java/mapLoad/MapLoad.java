@@ -17,6 +17,7 @@ import org.geotools.styling.SLD;
 import org.geotools.styling.Style;
 import org.geotools.swing.JMapFrame;
 import org.geotools.swing.data.JFileDataStoreChooser;
+import org.graphstream.algorithm.Dijkstra;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
 import com.vividsolutions.jts.geom.Coordinate;
@@ -71,11 +72,9 @@ public class MapLoad {
 		//approxmate location of capitol building
 		Coordinate centerCoord = new Coordinate(-97.7392, 30.2747 );
 
-
 		while (streetIterator.hasNext() ){
-
 			SimpleFeature streetSegment = streetIterator.next();
-			System.out.println(streetSegment.getAttribute("street_typ"));
+			//System.out.println(streetSegment.getAttribute("street_typ"));
 			MultiLineString defGeom = (MultiLineString) streetSegment.getDefaultGeometry();
 			float road_class = Float.parseFloat(streetSegment.getAttribute("road_class").toString());
 			if (road_class<=8.0 ){
@@ -97,7 +96,7 @@ public class MapLoad {
 						pointID++;
 						coordMap.put(temp, pointID);
 						if (pointID < 10){
-							System.out.println("Point: "+temp.toString() );
+							//System.out.println("Point: "+temp.toString() );
 						}
 					}
 					if (lastCoord == null){
@@ -124,12 +123,12 @@ public class MapLoad {
 		System.out.println("Edges: "+edgeList.size());
 
 		Graph roadGraph = new MultiGraph("AustinRoads");
-		String styleSheet = "graph {} edge.roadClass1{fill-color: Red;} edge.roadClass2{fill-color: Orange;} "
-				+ "edge.roadClass3{fill-color: Yellow;} edge.roadClass4{fill-color: Blue;}";
+		String styleSheet = "graph {} edge.roadClass1{fill-color: Orange;} edge.roadClass2{fill-color: Orange;} "
+			+ "edge.roadClass3{fill-color: Yellow;} edge.roadClass4{fill-color: Green;}";
 		roadGraph.addAttribute("ui.stylesheet", styleSheet);
-		for(int i = 1; i <= coordMap.size(); i++){
-			roadGraph.addNode( Integer.toString(i) );
-		}
+       for(int i = 1; i <= coordMap.size(); i++){
+            roadGraph.addNode(Integer.toString(i));
+        }
 		int edgeID = 0;
 		for(RoadEdge temp: edgeList){
 			edgeID++;
@@ -137,50 +136,38 @@ public class MapLoad {
 			String roadClass =  "roadClass1";
 			if( temp.road_class == 1.0){
 				roadClass = "roadClass1";
-				System.out.println("set Red");
 			} else if( temp.road_class == 2.0){
 				roadClass = "roadClass2";
-				System.out.println("set Orange");
 			} else if( temp.road_class == 3.0){
 				roadClass = "roadClass3";
-				System.out.println("set Yellow");
 			} else if( temp.road_class == 4.0){
 				roadClass = "roadClass4";
-				System.out.println("set blue");
 			} else if( temp.road_class == 5.0){
 				roadClass = "roadClass5";
-				System.out.println("set Green");
 			} else if( temp.road_class == 6.0){
 				roadClass = "roadClass6";
-				System.out.println("set Cyan");
 			} else if( temp.road_class == 7.0){
 				roadClass = "roadClass7";
-				System.out.println("set Magenta");
 			}
 			roadGraph.getEdge(Integer.toString(edgeID)).addAttribute("ui.class", roadClass);
-		}
+            roadGraph.getEdge(Integer.toString(edgeID)).addAttribute("length", temp.road_class);
+
+        }
 
 		roadGraph.display();
+        Dijkstra dijkstra = new Dijkstra(Dijkstra.Element.EDGE, null, "length");
 
-		// Now display the map
-		//JMapFrame.showMap(map);
+        // Compute the shortest paths in roadGraph from 1 to all nodes
+        dijkstra.init(roadGraph);
+        dijkstra.setSource(roadGraph.getNode("98"));
+        dijkstra.compute();
+        System.out.println(roadGraph.getEdgeSet());
+        for (Node node : roadGraph)
+            System.out.printf("%s->%s:%10.2f%n", dijkstra.getSource(), node,
+                    dijkstra.getPathLength(node));
+        // Color in blue all the nodes on the shortest path form A to B
+        Node node = dijkstra.getSource();
+        node.addAttribute("ui.style", "fill-color: blue;");
+    }
 
-
-
-	}
-
-}
-
-class RoadEdge{
-	int start;
-	int stop;
-	double distance;
-	float road_class; 
-	
-	RoadEdge(int strt, int stop, double dist, float road_class){
-		this.start = strt;
-		this.stop = stop;
-		this.distance = dist;
-		this.road_class = road_class;
-	}
 }
